@@ -1,6 +1,15 @@
 #include "quakedef.h"
 
-//#include <SDL2/SDL.h>
+#include <SDL2/SDL.h>
+
+bool bQuit = false;
+
+int32_t MainWndProc( SDL_Window* wnd, SDL_Event* evt ) {
+	(void)wnd;
+	if ( evt->type == SDL_QUIT ) bQuit = true;
+
+	return 0;
+}
 
 int main( int argc, const char** argv ) {
 	// do you even parse bro
@@ -19,12 +28,14 @@ int main( int argc, const char** argv ) {
 	}
 
 	// SDL
-	/*if ( SDL_Init( SDL_INIT_EVERYTHING ) != 0 ) {
+	if ( SDL_Init( SDL_INIT_EVERYTHING ) != 0 ) {
 		fprintf( stderr, "SDL_Init error: %s\n", SDL_GetError() );
 		return EXIT_FAILURE;
 	}
 
-	SDL_Window* win = SDL_CreateWindow( "HMQ", 100, 100, 640, 480, SDL_WINDOW_SHOWN );
+	SDL_DisplayMode dtm;
+	SDL_GetDesktopDisplayMode( 0, &dtm );
+	SDL_Window* win = SDL_CreateWindow( "HMQ", (dtm.w-640)/2, (dtm.h-480)/2, 640, 480, SDL_WINDOW_SHOWN );
 	if ( win == NULL ) {
 		fprintf( stderr, "SDL_CreateWindow error: %s\n", SDL_GetError() );
 		SDL_Quit(); return EXIT_FAILURE;
@@ -37,13 +48,13 @@ int main( int argc, const char** argv ) {
 		fprintf( stderr, "SDL_CreateRenderer error: %s\n", SDL_GetError() );
 		SDL_Quit(); return EXIT_FAILURE;
 	}
+	SDL_SetRenderDrawColor( ren, 32, 32, 32, 255 );
 
 	// main loop
 	SDL_Event evt;
-	uint8_t bQuit = 0;
-	while ( bQuit == 0 ) {
+	while ( bQuit == false ) {
 		while ( SDL_PollEvent( &evt ) ) {
-			if ( evt.type == SDL_QUIT ) bQuit = 1;
+			MainWndProc( win, &evt );
 		}
 
 		SDL_RenderClear( ren );
@@ -53,7 +64,7 @@ int main( int argc, const char** argv ) {
 	// SDL cleanup
 	SDL_DestroyRenderer( ren );
 	SDL_DestroyWindow( win );
-	SDL_Quit();*/
+	SDL_Quit();
 
 	return EXIT_SUCCESS;
 }
