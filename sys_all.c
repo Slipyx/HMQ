@@ -2,11 +2,19 @@
 
 #include <SDL2/SDL.h>
 
-bool bQuit = false;
+bool bRunning = true;
 
 int32_t MainWndProc( SDL_Window* wnd, SDL_Event* evt ) {
 	(void)wnd;
-	if ( evt->type == SDL_QUIT ) bQuit = true;
+
+	switch ( evt->type ) {
+	case SDL_QUIT:
+		bRunning = false;
+		break;
+	case SDL_KEYUP:
+		break;
+	default: break;
+	}
 
 	return 0;
 }
@@ -41,8 +49,8 @@ int main( int argc, const char** argv ) {
 		SDL_Quit(); return EXIT_FAILURE;
 	}
 
-	SDL_Renderer* ren = SDL_CreateRenderer( win, -1, SDL_RENDERER_ACCELERATED |
-		SDL_RENDERER_PRESENTVSYNC );
+	SDL_Renderer* ren = SDL_CreateRenderer( win, -1, SDL_RENDERER_ACCELERATED /*|
+		SDL_RENDERER_PRESENTVSYNC*/ );
 	if ( ren == NULL ) {
 		SDL_DestroyWindow( win );
 		fprintf( stderr, "SDL_CreateRenderer error: %s\n", SDL_GetError() );
@@ -52,7 +60,7 @@ int main( int argc, const char** argv ) {
 
 	// main loop
 	SDL_Event evt;
-	while ( bQuit == false ) {
+	while ( bRunning ) {
 		while ( SDL_PollEvent( &evt ) ) {
 			MainWndProc( win, &evt );
 		}
