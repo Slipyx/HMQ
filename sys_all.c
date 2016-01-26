@@ -58,6 +58,12 @@ int main( int argc, const char** argv ) {
 	}
 	SDL_SetRenderDrawColor( ren, 32, 32, 32, 255 );
 
+	// timing infos
+	//Uint64 perfFreq = SDL_GetPerformanceFrequency();
+	double secsPerCount = 1.0 / SDL_GetPerformanceFrequency();
+	Uint64 st = SDL_GetPerformanceCounter(), ct = 0;
+	float dt = 0;
+
 	// main loop
 	SDL_Event evt;
 	while ( bRunning ) {
@@ -67,6 +73,10 @@ int main( int argc, const char** argv ) {
 
 		SDL_RenderClear( ren );
 		SDL_RenderPresent( ren );
+
+		// calc delta time
+		ct = SDL_GetPerformanceCounter();
+		dt = (ct - st) * secsPerCount; st = ct;
 	}
 
 	// SDL cleanup
