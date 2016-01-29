@@ -2,14 +2,38 @@
 
 #include <SDL2/SDL.h>
 
-bool bRunning = true;
+static bool bRunning = true;
+
+// Internal timer data
+static double secsPerCount = 0;
+static Uint64 stime = 0, ctime = 0;
+
+// Public timer functions
+float Sys_InitFloatTime( void ) {
+	// initialize timer info
+	secsPerCount = 1.0 / SDL_GetPerformanceFrequency();
+	stime = SDL_GetPerformanceCounter();
+
+	return stime * secsPerCount;
+}
+
+float Sys_FloatTime( void ) {
+	ctime = SDL_GetPerformanceCounter();
+
+	return (ctime - stime) * secsPerCount;
+}
+
+// Shutdown and stop main loop
+void Sys_Shutdown( void ) {
+	bRunning = false;
+}
 
 int32_t MainWndProc( SDL_Window* wnd, SDL_Event* evt ) {
 	(void)wnd;
 
 	switch ( evt->type ) {
 	case SDL_QUIT:
-		bRunning = false;
+		Sys_Shutdown();
 		break;
 	case SDL_KEYUP:
 		break;
@@ -18,6 +42,8 @@ int32_t MainWndProc( SDL_Window* wnd, SDL_Event* evt ) {
 
 	return 0;
 }
+
+#define AR_LEN( ar ) (sizeof(ar) / sizeof(ar[0]))
 
 int main( int argc, const char** argv ) {
 	// do you even parse bro
@@ -56,27 +82,30 @@ int main( int argc, const char** argv ) {
 		fprintf( stderr, "SDL_CreateRenderer error: %s\n", SDL_GetError() );
 		SDL_Quit(); return EXIT_FAILURE;
 	}
-	SDL_SetRenderDrawColor( ren, 32, 32, 32, 255 );
+	SDL_RenderClear( ren );
 
-	// timing infos
-	//Uint64 perfFreq = SDL_GetPerformanceFrequency();
-	double secsPerCount = 1.0 / SDL_GetPerformanceFrequency();
-	Uint64 st = SDL_GetPerformanceCounter(), ct = 0;
-	float dt = 0;
+	float startTime = Sys_InitFloatTime();
 
 	// main loop
 	SDL_Event evt;
 	while ( bRunning ) {
+		// calc for frame time
+		float currentTime = Sys_FloatTime();
+
 		while ( SDL_PollEvent( &evt ) ) {
 			MainWndProc( win, &evt );
 		}
 
-		SDL_RenderClear( ren );
-		SDL_RenderPresent( ren );
+		//printf( "%.14f\n", currentTime );
 
-		// calc delta time
-		ct = SDL_GetPerformanceCounter();
-		dt = (ct - st) * secsPerCount; st = ct;
+		SDL_SetRenderDrawColor( ren, 32, 32, 32, 255 );
+		SDL_RenderClear( ren );
+
+		// do da drawin
+		//SDL_SetRenderDrawColor( ren, 0, 255, 0, 255 );
+		//SDL_RenderDrawRect( ren, &rect );
+
+		SDL_RenderPresent( ren );
 	}
 
 	// SDL cleanup
