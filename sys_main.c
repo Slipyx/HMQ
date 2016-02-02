@@ -1,4 +1,5 @@
 #include "quakedef.h"
+#include "host.h"
 
 #include <SDL2/SDL.h>
 
@@ -14,7 +15,7 @@ float Sys_InitFloatTime( void ) {
 	secsPerCount = 1.0 / SDL_GetPerformanceFrequency();
 	stime = SDL_GetPerformanceCounter();
 
-	return stime * secsPerCount;
+	return 0;
 }
 
 float Sys_FloatTime( void ) {
@@ -84,19 +85,17 @@ int main( int argc, const char** argv ) {
 	}
 	SDL_RenderClear( ren );
 
+	Host_Init();
+	const float targTimeStep = 1.0f / 60;
+	float timeStepAccum = 0;
 	float startTime = Sys_InitFloatTime();
 
 	// main loop
 	SDL_Event evt;
 	while ( bRunning ) {
-		// calc for frame time
-		float currentTime = Sys_FloatTime();
-
 		while ( SDL_PollEvent( &evt ) ) {
 			MainWndProc( win, &evt );
 		}
-
-		//printf( "%.14f\n", currentTime );
 
 		SDL_SetRenderDrawColor( ren, 32, 32, 32, 255 );
 		SDL_RenderClear( ren );
@@ -106,7 +105,19 @@ int main( int argc, const char** argv ) {
 		//SDL_RenderDrawRect( ren, &rect );
 
 		SDL_RenderPresent( ren );
+
+		// calc frame time and step through a frame
+		float currentTime = Sys_FloatTime();
+		timeStepAccum += (currentTime - startTime);
+		startTime = currentTime;
+		if ( timeStepAccum > targTimeStep ) {
+			Host_Frame( targTimeStep );
+			timeStepAccum -= targTimeStep;
+		}
 	}
+
+	// Host shutdown
+	Host_Shutdown();
 
 	// SDL cleanup
 	SDL_DestroyRenderer( ren );
