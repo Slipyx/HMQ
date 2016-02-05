@@ -1,5 +1,4 @@
 #include "quakedef.h"
-#include "host.h"
 
 #include <SDL2/SDL.h>
 
@@ -86,8 +85,6 @@ int main( int argc, const char** argv ) {
 	SDL_RenderClear( ren );
 
 	Host_Init();
-	const float targTimeStep = 1.0f / 60;
-	float timeStepAccum = 0;
 	float startTime = Sys_InitFloatTime();
 
 	// main loop
@@ -107,13 +104,10 @@ int main( int argc, const char** argv ) {
 		SDL_RenderPresent( ren );
 
 		// calc frame time and step through a frame
+		// timestep filtering is done in host
 		float currentTime = Sys_FloatTime();
-		timeStepAccum += (currentTime - startTime);
+		Host_Frame( currentTime - startTime );
 		startTime = currentTime;
-		if ( timeStepAccum > targTimeStep ) {
-			Host_Frame( targTimeStep );
-			timeStepAccum -= targTimeStep;
-		}
 	}
 
 	// Host shutdown
