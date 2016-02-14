@@ -1,6 +1,13 @@
 #include "quakedef.h"
 
-#include <SDL2/SDL.h>
+//#include <SDL2/SDL.h>
+
+// globals
+const Uint16 SCRW = 320, SCRH = 240;
+//SDL_Window* window = NULL;
+SDL_Renderer* renderer = NULL;
+SDL_Texture* wintex = NULL;
+//SDL_Surface* winsurf = NULL; // access to window width and height
 
 static bool bRunning = true;
 
@@ -67,22 +74,31 @@ int main( int argc, const char** argv ) {
 		return EXIT_FAILURE;
 	}
 
-	SDL_DisplayMode dtm;
-	SDL_GetDesktopDisplayMode( 0, &dtm );
-	SDL_Window* win = SDL_CreateWindow( "HMQ", (dtm.w-640)/2, (dtm.h-480)/2, 640, 480, SDL_WINDOW_SHOWN );
-	if ( win == NULL ) {
+	SDL_Window* window = SDL_CreateWindow( "HMQ", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+		640, 480, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
+	if ( window == NULL ) {
 		fprintf( stderr, "SDL_CreateWindow error: %s\n", SDL_GetError() );
 		SDL_Quit(); return EXIT_FAILURE;
 	}
 
-	SDL_Renderer* ren = SDL_CreateRenderer( win, -1, SDL_RENDERER_ACCELERATED /*|
-		SDL_RENDERER_PRESENTVSYNC*/ );
-	if ( ren == NULL ) {
-		SDL_DestroyWindow( win );
+	//winsurf = SDL_GetWindowSurface( window );
+	renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED
+		/*| SDL_RENDERER_PRESENTVSYNC*/ );
+	//SDL_Renderer* ren = SDL_CreateSoftwareRenderer( winsurf );
+	if ( renderer == NULL ) {
+		SDL_DestroyWindow( window );
 		fprintf( stderr, "SDL_CreateRenderer error: %s\n", SDL_GetError() );
 		SDL_Quit(); return EXIT_FAILURE;
 	}
-	SDL_RenderClear( ren );
+
+	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "linear" );
+	SDL_RenderSetLogicalSize( renderer, SCRW, SCRH );
+
+	SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
+	SDL_RenderClear( renderer );
+
+	wintex = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+		SCRW, SCRH );
 
 	Host_Init();
 	float startTime = Sys_InitFloatTime();
@@ -91,17 +107,8 @@ int main( int argc, const char** argv ) {
 	SDL_Event evt;
 	while ( bRunning ) {
 		while ( SDL_PollEvent( &evt ) ) {
-			MainWndProc( win, &evt );
+			MainWndProc( window, &evt );
 		}
-
-		SDL_SetRenderDrawColor( ren, 32, 32, 32, 255 );
-		SDL_RenderClear( ren );
-
-		// do da drawin
-		//SDL_SetRenderDrawColor( ren, 0, 255, 0, 255 );
-		//SDL_RenderDrawRect( ren, &rect );
-
-		SDL_RenderPresent( ren );
 
 		// calc frame time and step through a frame
 		// timestep filtering is done in host
@@ -114,8 +121,9 @@ int main( int argc, const char** argv ) {
 	Host_Shutdown();
 
 	// SDL cleanup
-	SDL_DestroyRenderer( ren );
-	SDL_DestroyWindow( win );
+	SDL_DestroyTexture( wintex );
+	SDL_DestroyRenderer( renderer );
+	SDL_DestroyWindow( window );
 	SDL_Quit();
 
 	return EXIT_SUCCESS;
