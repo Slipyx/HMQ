@@ -3,13 +3,14 @@
 //#include <SDL2/SDL.h>
 
 // globals
-const Uint16 SCRW = 320, SCRH = 240;
-//SDL_Window* window = NULL;
+const Uint16 RNDW = 320, RNDH = 240;
 SDL_Renderer* renderer = NULL;
 SDL_Texture* wintex = NULL;
+//SDL_Window* window = NULL;
 //SDL_Surface* winsurf = NULL; // access to window width and height
 
 static bool bRunning = true;
+static bool bFullscreen = false;
 
 // Internal timer data
 static double secsPerCount = 0;
@@ -36,13 +37,17 @@ void Sys_Shutdown( void ) {
 }
 
 int32_t MainWndProc( SDL_Window* wnd, SDL_Event* evt ) {
-	(void)wnd;
-
 	switch ( evt->type ) {
 	case SDL_QUIT:
 		Sys_Shutdown();
 		break;
 	case SDL_KEYUP:
+		// toggle fullscreen
+		if ( evt->key.keysym.sym == SDLK_F4 ) {
+			bFullscreen = !bFullscreen;
+			SDL_SetWindowFullscreen( wnd, ((bFullscreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) );
+		}
+
 		break;
 	default: break;
 	}
@@ -75,7 +80,9 @@ int main( int argc, const char** argv ) {
 	}
 
 	SDL_Window* window = SDL_CreateWindow( "HMQ", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		640, 480, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
+		960, 720, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE |
+		((bFullscreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) );
+
 	if ( window == NULL ) {
 		fprintf( stderr, "SDL_CreateWindow error: %s\n", SDL_GetError() );
 		SDL_Quit(); return EXIT_FAILURE;
@@ -91,14 +98,14 @@ int main( int argc, const char** argv ) {
 		SDL_Quit(); return EXIT_FAILURE;
 	}
 
-	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "linear" );
-	SDL_RenderSetLogicalSize( renderer, SCRW, SCRH );
+	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "nearest" );
+	SDL_RenderSetLogicalSize( renderer, RNDW, RNDH );
 
 	SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
 	SDL_RenderClear( renderer );
 
-	wintex = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-		SCRW, SCRH );
+	wintex = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_STREAMING, RNDW, RNDH );
 
 	Host_Init();
 	float startTime = Sys_InitFloatTime();
