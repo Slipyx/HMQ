@@ -9,10 +9,18 @@ extern bool bUsing8bpp; // read-only
 
 // raw 32b pixel buffer
 uint32_t* pixbuf = NULL;
-
-// the two pointers here are only valid when using 8bpp (bUsing8bpp)
+// the pixbuf8 pointer is only valid when using 8bpp (bUsing8bpp)
 uint8_t* pixbuf8 = NULL; // 8bpp index buffer
-uint32_t* palette = NULL; // 256 32bit colors array
+
+uint32_t palette[256] = {0}; // 256 32bit colors array
+
+// pics
+typedef struct {
+	uint32_t w, h;
+	uint8_t* data;
+} pic_t;
+
+pic_t qpic;
 
 float Sys_FloatTime( void );
 
@@ -25,29 +33,93 @@ void Host_Init( void ) {
 
 	if ( bUsing8bpp ) {
 		pixbuf8 = (uint8_t*)malloc( RNDW * RNDH * sizeof (pixbuf8[0]) );
-
-		// generate random palette
-		palette = (uint32_t*)malloc( 256 * sizeof (palette[0]) );
-		palette[0] = 0;
-		for ( int i = 1; i < 256; ++i ) {
-			palette[i] = (255 << 24) |
-				((rand() % 256) << 16) | ((rand() % 256) << 8) | (rand() % 256);
-		}
 	}
 
-	uint8_t bgpalidx = rand() % 256; // for 8bpp
+	// load palette from palette.lmp
+	FILE* palFile = fopen( "gfx/palette.lmp", "rb" );
+	uint8_t* palData = (uint8_t*)malloc( 256 * 3 );
+	fread( palData, 3, 256, palFile );
+	fclose( palFile );
+
+	uint8_t* palp = palData;
+	for ( int i = 0; i < 256; ++i ) {
+		palette[i] = (255 << 24) |
+			(palp[0] << 16) | (palp[1] << 8) | (palp[2]);
+		palp += 3;
+	}
+	free( palData ); palData = NULL;
 
 	for ( int i = 0; i < RNDW * RNDH; ++i ) {
 		if ( bUsing8bpp )
-			pixbuf8[i] = bgpalidx;
+			pixbuf8[i] = 8;
 		else
 			pixbuf[i] = 0x202020;
 	}
+
+	// pic loading
+	FILE* picFile = fopen( "gfx/sbar.lmp", "rb" );
+	fread( &qpic.w, 4, 1, picFile );
+	fread( &qpic.h, 4, 1, picFile );
+	qpic.data = (uint8_t*)malloc( qpic.w * qpic.h );
+	fread( qpic.data, 1, qpic.w * qpic.h, picFile );
+	fclose( picFile );
 }
 
 // =======
 // Drawing
 // =======
+void DrawPic8( uint32_t x, uint32_t y, pic_t pic, uint8_t* buffer ) {
+	uint32_t pw = pic.w, ph = pic.h;
+
+	// fix any render view overflow
+	if ( x >= RNDW )
+		x %= RNDW;
+	if ( y >= RNDH )
+		y %= RNDH;
+	if ( (x + pw) > RNDW )
+		pw = RNDW - x;
+	if ( (y + ph) > RNDH )
+		ph = RNDH - y;
+
+	buffer += (RNDW * y + x);
+	uint8_t* src = pic.data;
+
+	for ( uint16_t height = 0; height < ph; ++height ) {
+		for ( uint16_t width = 0; width < pw; ++width ) {
+			*buffer = *src;
+			++src; ++buffer;
+		}
+		buffer += RNDW - pw;
+		if ( pw < pic.w ) src += pic.w - pw;
+	}
+}
+
+void DrawPic32( uint32_t x, uint32_t y, pic_t pic, uint32_t* buffer ) {
+	uint32_t pw = pic.w, ph = pic.h;
+
+	// fix any render view overflow
+	if ( x >= RNDW )
+		x %= RNDW;
+	if ( y >= RNDH )
+		y %= RNDH;
+	if ( (x + pw) > RNDW )
+		pw = RNDW - x;
+	if ( (y + ph) > RNDH )
+		ph = RNDH - y;
+
+	buffer += (RNDW * y + x);
+	uint8_t* src = pic.data;
+
+	for ( uint16_t height = 0; height < ph; ++height ) {
+		for ( uint16_t width = 0; width < pw; ++width ) {
+			*buffer = palette[*src];
+			++src; ++buffer;
+		}
+		buffer += RNDW - pw;
+		if ( pw < pic.w ) src += pic.w - pw;
+	}
+}
+
 void DrawRect( uint32_t x, uint32_t y, uint16_t w, uint16_t h,
 	uint8_t rv, uint8_t gv, uint8_t bv, uint32_t* buffer ) {
 
@@ -138,10 +210,13 @@ bool Host_Frame( float _t ) {
 	else
 		pixbuf[RNDW * 100 + 200] = 0xFF00FF00;*/
 
-	if ( bUsing8bpp )
-		DrawRect8( 160-16, 120-16, 32, 32, 1, pixbuf8 );
-	else
-		DrawRect( 10, 10, 100, 200, 255, 127, 0, pixbuf );
+	if ( bUsing8bpp ) {
+		DrawRect8( RNDW/2-16, RNDH/2-16, 32, 32, 127, pixbuf8 );
+		DrawPic8( (RNDW - qpic.w) / 2, RNDH - qpic.h, qpic, pixbuf8 );
+	} else {
+		DrawRect( 160, 200, 100, 200, 255, 127, 0, pixbuf );
+		DrawPic32( 10, 400, qpic, pixbuf );
+	}
 
 	// if using 8bpp, do this to update the actual 32b pixel
 	// buffer from the dummy indexed pixel buffer and palette structure
@@ -153,8 +228,10 @@ bool Host_Frame( float _t ) {
 }
 
 void Host_Shutdown( void ) {
+	// free pic data
+	free( qpic.data ); qpic.data = NULL;
+
 	if ( bUsing8bpp ) {
-		free( palette ); palette = NULL;
 		free( pixbuf8 ); pixbuf8 = NULL;
 	}
 	free( pixbuf ); pixbuf = NULL;

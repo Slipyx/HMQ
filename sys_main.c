@@ -3,7 +3,7 @@
 #include <SDL2/SDL.h>
 
 // globals
-const Uint16 RNDW = 320, RNDH = 240;
+const Uint16 RNDW = 320, RNDH = 200;
 //SDL_Surface* winsurf = NULL; // access to window width and height
 extern uint32_t* pixbuf; // raw 32b pixel buffer made in Host
 
@@ -103,7 +103,8 @@ int main( int argc, const char** argv ) {
 	}
 
 	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "linear" );
-	SDL_RenderSetLogicalSize( renderer, RNDW, RNDH );
+	// RNDW/H will be 16:10, RNDH * 1.2 to stretch to its corresponding 4:3 view
+	SDL_RenderSetLogicalSize( renderer, RNDW, RNDH * 1.2f );
 
 	SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
 	SDL_RenderClear( renderer );
