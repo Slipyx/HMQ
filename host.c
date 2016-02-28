@@ -1,18 +1,10 @@
 #include "quakedef.h"
 
 extern const uint16_t RNDW, RNDH;
-//extern SDL_Renderer* renderer;
-//extern SDL_Texture* wintex;
-//extern SDL_Window* window;
-//extern SDL_Surface* winsurf;
-extern bool bUsing8bpp; // read-only
-
-// raw 32b pixel buffer
-uint32_t* pixbuf = NULL;
-// the pixbuf8 pointer is only valid when using 8bpp (bUsing8bpp)
-uint8_t* pixbuf8 = NULL; // 8bpp index buffer
-
-uint32_t palette[256] = {0}; // 256 32bit colors array
+//extern bool bUsing8bpp; // read-only
+// raw 32b pixel buffer from vid_main
+extern uint32_t* pixbuf;
+extern uint32_t palette[256];
 
 // pics
 typedef struct {
@@ -22,39 +14,14 @@ typedef struct {
 
 pic_t qpic;
 
+// benchmarking stuff
 float Sys_FloatTime( void );
 
 // timestep info
 float realTime = 0, frameTime = 0;
 
 void Host_Init( void ) {
-	//pixbuf = (Uint32*)(winsurf->pixels);
-	pixbuf = (uint32_t*)malloc( RNDW * RNDH * sizeof (pixbuf[0]) );
-
-	if ( bUsing8bpp ) {
-		pixbuf8 = (uint8_t*)malloc( RNDW * RNDH * sizeof (pixbuf8[0]) );
-	}
-
-	// load palette from palette.lmp
-	FILE* palFile = fopen( "gfx/palette.lmp", "rb" );
-	uint8_t* palData = (uint8_t*)malloc( 256 * 3 );
-	fread( palData, 3, 256, palFile );
-	fclose( palFile );
-
-	uint8_t* palp = palData;
-	for ( int i = 0; i < 256; ++i ) {
-		palette[i] = (255 << 24) |
-			(palp[0] << 16) | (palp[1] << 8) | (palp[2]);
-		palp += 3;
-	}
-	free( palData ); palData = NULL;
-
-	for ( int i = 0; i < RNDW * RNDH; ++i ) {
-		if ( bUsing8bpp )
-			pixbuf8[i] = 8;
-		else
-			pixbuf[i] = 0x202020;
-	}
+	VID_Init();
 
 	// pic loading
 	FILE* picFile = fopen( "gfx/sbar.lmp", "rb" );
@@ -68,7 +35,7 @@ void Host_Init( void ) {
 // =======
 // Drawing
 // =======
-void DrawPic8( uint32_t x, uint32_t y, pic_t pic, uint8_t* buffer ) {
+/*void DrawPic8( uint32_t x, uint32_t y, pic_t pic, uint8_t* buffer ) {
 	uint32_t pw = pic.w, ph = pic.h;
 
 	// fix any render view overflow
@@ -92,7 +59,7 @@ void DrawPic8( uint32_t x, uint32_t y, pic_t pic, uint8_t* buffer ) {
 		buffer += RNDW - pw;
 		if ( pw < pic.w ) src += pic.w - pw;
 	}
-}
+}*/
 
 void DrawPic32( uint32_t x, uint32_t y, pic_t pic, uint32_t* buffer ) {
 	uint32_t pw = pic.w, ph = pic.h;
@@ -149,7 +116,7 @@ void DrawRect( uint32_t x, uint32_t y, uint16_t w, uint16_t h,
 	}
 }
 
-void DrawRect8( uint32_t x, uint32_t y, uint16_t w, uint16_t h,
+/*void DrawRect8( uint32_t x, uint32_t y, uint16_t w, uint16_t h,
 	uint8_t col, uint8_t* buffer ) {
 
 	// fix any render view overflow
@@ -173,7 +140,7 @@ void DrawRect8( uint32_t x, uint32_t y, uint16_t w, uint16_t h,
 		}
 		buffer += RNDW - w;
 	}
-}
+}*/
 
 // takes in a raw delta time and proceeds if enough
 // has accumulated for another fixed timestep
@@ -189,9 +156,13 @@ bool Host_Frame( float _t ) {
 	ort = realTime;
 	// cap frameTime so we dont get big time steps
 	if ( frameTime > 0.1f ) frameTime = 0.1f;
+
+	// ====
 	// enough frame time has passed for another frame update
 
-	// do it
+	// Poll events
+	Sys_SendKeyEvents();
+
 	static float ftt = 0;
 	ftt += frameTime;
 	if ( ftt > 0.5f ) {
@@ -210,29 +181,23 @@ bool Host_Frame( float _t ) {
 	else
 		pixbuf[RNDW * 100 + 200] = 0xFF00FF00;*/
 
-	if ( bUsing8bpp ) {
+	/*if ( bUsing8bpp ) {
 		DrawRect8( RNDW/2-16, RNDH/2-16, 32, 32, 127, pixbuf8 );
 		DrawPic8( (RNDW - qpic.w) / 2, RNDH - qpic.h, qpic, pixbuf8 );
-	} else {
-		DrawRect( 160, 200, 100, 200, 255, 127, 0, pixbuf );
-		DrawPic32( 10, 400, qpic, pixbuf );
-	}
+	} else {*/
+	DrawRect( 160, 100, 160, 100, 255, 127, 0, pixbuf );
+	DrawPic32( 0, RNDH - qpic.h, qpic, pixbuf );
 
-	// if using 8bpp, do this to update the actual 32b pixel
-	// buffer from the dummy indexed pixel buffer and palette structure
-	if ( bUsing8bpp )
-		for ( int i = 0; i < RNDW * RNDH; ++i )
-			pixbuf[i] = palette[pixbuf8[i]];
+	// frame is ready to be finalized in VID
+	VID_Update();
 
 	return true;
 }
 
 void Host_Shutdown( void ) {
+	// shutdown video
+	VID_Shutdown();
+
 	// free pic data
 	free( qpic.data ); qpic.data = NULL;
-
-	if ( bUsing8bpp ) {
-		free( pixbuf8 ); pixbuf8 = NULL;
-	}
-	free( pixbuf ); pixbuf = NULL;
 }

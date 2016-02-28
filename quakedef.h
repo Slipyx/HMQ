@@ -8,10 +8,10 @@
 #include <time.h>
 #include <math.h>
 
-//#include <SDL2/SDL.h>
-
 #include "common.h"
 #include "q_stl.h"
 #include "host.h"
+#include "sys.h"
+#include "vid.h"
 
 #endif // _QUAKEDEF_H

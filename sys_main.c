@@ -3,17 +3,14 @@
 #include <SDL2/SDL.h>
 
 // globals
-const Uint16 RNDW = 320, RNDH = 200;
-//SDL_Surface* winsurf = NULL; // access to window width and height
-extern uint32_t* pixbuf; // raw 32b pixel buffer made in Host
+extern SDL_Window* window;
 
 // treat screen buffer as indexed 8bpp?
 // enabled by default, command line -32bpp disables
 // should be set before Host_Init and remain read only from then
-bool bUsing8bpp = true;
+//bool bUsing8bpp = true;
 
 static bool bRunning = true;
-static bool bFullscreen = false;
 
 // Internal timer data
 static double secsPerCount = 0;
@@ -34,28 +31,20 @@ float Sys_FloatTime( void ) {
 	return (curtime - startime) * secsPerCount;
 }
 
+// MainWndProc from vid_main
+void MainWndProc( SDL_Window* wnd, SDL_Event* evt );
+
+// poll events
+void Sys_SendKeyEvents( void ) {
+	SDL_Event evt;
+	while ( SDL_PollEvent( &evt ) ) {
+		MainWndProc( window, &evt );
+	}
+}
+
 // Shutdown and stop main loop
 void Sys_Shutdown( void ) {
 	bRunning = false;
-}
-
-int32_t MainWndProc( SDL_Window* wnd, SDL_Event* evt ) {
-	switch ( evt->type ) {
-	case SDL_QUIT:
-		Sys_Shutdown();
-		break;
-	case SDL_KEYUP:
-		// toggle fullscreen
-		if ( evt->key.keysym.sym == SDLK_F4 ) {
-			bFullscreen = !bFullscreen;
-			SDL_SetWindowFullscreen( wnd, ((bFullscreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) );
-		}
-
-		break;
-	default: break;
-	}
-
-	return 0;
 }
 
 #define AR_LEN( ar ) (sizeof(ar) / sizeof(ar[0]))
@@ -68,72 +57,27 @@ int main( int argc, const char** argv ) {
 		++com_argc;
 	}
 
-	uint8_t pf = COM_CheckParm( "-32bpp" );
+	/*uint8_t pf = COM_CheckParm( "-32bpp" );
 	if ( pf != 0 ) {
 		printf( "8bpp disabled. Using 32bpp.\n" );
-		bUsing8bpp = false;
+		//bUsing8bpp = false;
 	} else
-		printf( "Using 8bpp.\n" );
+		printf( "Using 8bpp.\n" );*/
 
 	srand( time( NULL ) );
-
-	// SDL
-	if ( SDL_Init( SDL_INIT_EVERYTHING ) != 0 ) {
-		fprintf( stderr, "SDL_Init error: %s\n", SDL_GetError() );
-		return EXIT_FAILURE;
-	}
-
-	SDL_Window* window = SDL_CreateWindow( "HMQ", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		960, 720, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE |
-		((bFullscreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) );
-
-	if ( window == NULL ) {
-		fprintf( stderr, "SDL_CreateWindow error: %s\n", SDL_GetError() );
-		SDL_Quit(); return EXIT_FAILURE;
-	}
-
-	//winsurf = SDL_GetWindowSurface( window );
-	SDL_Renderer* renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED
-		| SDL_RENDERER_PRESENTVSYNC );
-	//SDL_Renderer* ren = SDL_CreateSoftwareRenderer( winsurf );
-	if ( renderer == NULL ) {
-		SDL_DestroyWindow( window );
-		fprintf( stderr, "SDL_CreateRenderer error: %s\n", SDL_GetError() );
-		SDL_Quit(); return EXIT_FAILURE;
-	}
-
-	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "linear" );
-	// RNDW/H will be 16:10, RNDH * 1.2 to stretch to its corresponding 4:3 view
-	SDL_RenderSetLogicalSize( renderer, RNDW, RNDH * 1.2f );
-
-	SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
-	SDL_RenderClear( renderer );
-
-	SDL_Texture* wintex = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
-		SDL_TEXTUREACCESS_STREAMING, RNDW, RNDH );
 
 	Host_Init();
 	float startTime = Sys_InitFloatTime();
 
 	// main loop
-	SDL_Event evt;
 	while ( bRunning ) {
-		while ( SDL_PollEvent( &evt ) ) {
-			MainWndProc( window, &evt );
-		}
 
 		// calc frame time and step through a frame
 		// timestep filtering is done in host
 		float currentTime = Sys_FloatTime();
 
-		// Host_Frame returns true if a frame was processed and needs to be finalized
-		if ( Host_Frame( currentTime - startTime ) ) {
-			//SDL_UpdateWindowSurface( window );
-			SDL_UpdateTexture( wintex, NULL, pixbuf, RNDW * sizeof (pixbuf[0]) );
-			SDL_RenderClear( renderer );
-			SDL_RenderCopy( renderer, wintex, NULL, NULL );
-			SDL_RenderPresent( renderer );
-		}
+		// check if enough frame time has passed and process another frame
+		Host_Frame( currentTime - startTime );
 
 		startTime = currentTime;
 	}
@@ -142,9 +86,6 @@ int main( int argc, const char** argv ) {
 	Host_Shutdown();
 
 	// SDL cleanup
-	SDL_DestroyTexture( wintex );
-	SDL_DestroyRenderer( renderer );
-	SDL_DestroyWindow( window );
 	SDL_Quit();
 
 	return EXIT_SUCCESS;
