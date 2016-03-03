@@ -163,12 +163,12 @@ bool Host_Frame( float _t ) {
 	// Poll events
 	Sys_SendKeyEvents();
 
-	static float ftt = 0;
+	/*static float ftt = 0;
 	ftt += frameTime;
 	if ( ftt > 0.5f ) {
 		printf("%.7f\n", frameTime);
 		ftt = 0;
-	}
+	}*/
 
 	// clear buffer
 	/*for ( int i = 0; i < RNDW * RNDH; ++i )
