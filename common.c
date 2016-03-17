@@ -12,3 +12,15 @@ uint8_t COM_CheckParm( const char* parm ) {
 
 	return 0;
 }
+
+const char* va( const char* format, ... ) {
+	va_list vl;
+	va_start( vl, format );
+
+	static char buf[1024];
+	vsnprintf( buf, 1024, format, vl );
+
+	va_end( vl );
+
+	return buf;
+}

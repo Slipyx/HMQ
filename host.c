@@ -24,12 +24,14 @@ void Host_Init( void ) {
 	VID_Init();
 
 	// pic loading
-	FILE* picFile = fopen( "gfx/sbar.lmp", "rb" );
-	fread( &qpic.w, 4, 1, picFile );
-	fread( &qpic.h, 4, 1, picFile );
-	qpic.data = (uint8_t*)malloc( qpic.w * qpic.h );
-	fread( qpic.data, 1, qpic.w * qpic.h, picFile );
-	fclose( picFile );
+	int32_t picFile = Sys_FileOpenRead( "gfx/sbar.lmp", NULL );
+	if ( picFile >= 0 ) {
+		Sys_FileRead( picFile, &qpic.w, 4 );
+		Sys_FileRead( picFile, &qpic.h, 4 );
+		qpic.data = (uint8_t*)malloc( qpic.w * qpic.h );
+		Sys_FileRead( picFile, qpic.data, qpic.w * qpic.h );
+		Sys_FileClose( picFile );
+	}
 }
 
 // =======
@@ -170,21 +172,6 @@ bool Host_Frame( float _t ) {
 		ftt = 0;
 	}*/
 
-	// clear buffer
-	/*for ( int i = 0; i < RNDW * RNDH; ++i )
-		*(pixbuf + i) = 0x202020;*/
-
-	// when using 8bpp only modify 8b idx buffer
-	// if not, can modify the 32b pixel buffer directly
-	/*if ( bUsing8bpp )
-		pixbuf8[RNDW * 100 + 200] = 0x7f;
-	else
-		pixbuf[RNDW * 100 + 200] = 0xFF00FF00;*/
-
-	/*if ( bUsing8bpp ) {
-		DrawRect8( RNDW/2-16, RNDH/2-16, 32, 32, 127, pixbuf8 );
-		DrawPic8( (RNDW - qpic.w) / 2, RNDH - qpic.h, qpic, pixbuf8 );
-	} else {*/
 	DrawRect( 160, 100, 160, 100, 255, 127, 0, pixbuf );
 	DrawPic32( 0, RNDH - qpic.h, qpic, pixbuf );
 

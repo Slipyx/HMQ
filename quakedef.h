@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <time.h>
 #include <math.h>
 
@@ -13,5 +14,6 @@
 #include "host.h"
 #include "sys.h"
 #include "vid.h"
+#include "file.h"
 
 #endif // _QUAKEDEF_H

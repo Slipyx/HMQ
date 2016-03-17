@@ -8,4 +8,6 @@ extern const char* com_argv[MAX_NUM_ARGVS + 1];
 
 uint8_t COM_CheckParm( const char* parm );
 
+const char* va( const char* format, ... );
+
 #endif // _COMMON_H
