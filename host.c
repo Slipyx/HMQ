@@ -6,6 +6,34 @@ extern const uint16_t RNDW, RNDH;
 extern uint32_t* pixbuf;
 extern uint32_t palette[256];
 
+#define MAX_PACKED_FILES 2048
+#pragma pack( push, 1 )
+typedef struct {
+	char magic[4];
+	uint32_t diroffs;
+	uint32_t dirsize;
+} dpackheader_t;
+
+typedef struct {
+	char name[56];
+	uint32_t offset;
+	uint32_t size;
+} dpackfile_t;
+
+typedef struct {
+	char name[64];
+	uint32_t offset;
+	uint32_t size;
+} packfile_t;
+
+typedef struct {
+	char name[128];
+	int32_t handle;
+	uint32_t numFiles;
+	packfile_t* pakFiles;
+} pack_t;
+#pragma pack( pop )
+
 // pics
 typedef struct {
 	uint32_t w, h;
@@ -20,8 +48,63 @@ float Sys_FloatTime( void );
 // timestep info
 float realTime = 0, frameTime = 0;
 
+// pak
+pack_t* COM_LoadPackFile( const char* path ) {
+	int32_t pakSz;
+	int32_t pakHnd = Sys_FileOpenRead( path, &pakSz );
+	//printf( "%d - %d\n", pakHnd, pakSz );
+
+	if ( pakHnd >= 0 ) {
+		dpackheader_t pakHead;
+		Sys_FileRead( pakHnd, &pakHead, sizeof (dpackheader_t) );
+
+		if ( pakHead.magic[0] != 'P' || pakHead.magic[1] != 'A'
+			|| pakHead.magic[2] != 'C' || pakHead.magic[3] != 'K' ) {
+				printf( "Not a valid pak file.\n" );
+				Sys_FileClose( pakHnd );
+				return NULL;
+		}
+
+		uint32_t numPakFiles = pakHead.dirsize / sizeof (dpackfile_t);
+
+		//printf( "%u, %u, %u\n", numPakFiles, pakHed.diroffs, pakHed.dirsize );
+
+		Sys_FileSeek( pakHnd, pakHead.diroffs );
+		dpackfile_t tmpPakFiles[MAX_PACKED_FILES];
+		Sys_FileRead( pakHnd, tmpPakFiles, pakHead.dirsize );
+
+		packfile_t* pakFiles = (packfile_t*)malloc( numPakFiles * sizeof (packfile_t) );
+
+		for ( uint32_t i = 0; i < numPakFiles; ++i ) {
+			Q_strncpy( pakFiles[i].name, tmpPakFiles[i].name, sizeof (tmpPakFiles[0].name) );
+			pakFiles[i].offset = tmpPakFiles[i].offset;
+			pakFiles[i].size = tmpPakFiles[i].size;
+		}
+
+		pack_t* pak = (pack_t*)malloc( sizeof (pack_t) );
+		Q_strncpy( pak->name, path, 64 );
+		pak->handle = pakHnd;
+		pak->numFiles = numPakFiles;
+		pak->pakFiles = pakFiles;
+
+		printf( "Loaded pack file \"%s\" with size of %u and %u entries.\n",
+			path, pakSz, numPakFiles );
+
+		return pak;
+
+		//free( pakFiles ); pakFiles = NULL;
+		//Sys_FileClose( pakHnd );
+	}
+
+	return NULL;
+}
+
 void Host_Init( void ) {
 	VID_Init();
+
+	pack_t* pak0 = COM_LoadPackFile( "id1/PAK0.PAK" );
+	//pack_t* pak1 = COM_LoadPackFile( "id1/PAK1.PAK" );
+	printf( "%s\n", pak0->name );
 
 	// pic loading
 	int32_t picFile = Sys_FileOpenRead( "gfx/sbar.lmp", NULL );
