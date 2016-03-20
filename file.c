@@ -30,7 +30,7 @@ int32_t Sys_FileOpenRead( const char* path, int32_t* fsize ) {
 	fileHandles[hndix] = fopen( path, "rb" );
 
 	if ( fileHandles[hndix] == NULL ) {
-		printf( "Couldn't open file for reading: \"%s\"\n", path );
+		//printf( "Couldn't open file for reading: \"%s\"\n", path );
 		if ( fsize != NULL ) *fsize = -1;
 		return -1;
 	}
@@ -51,7 +51,7 @@ int32_t Sys_FileOpenWrite( const char* path ) {
 	fileHandles[hndix] = fopen( path, "wb" );
 
 	if ( fileHandles[hndix] == NULL ) {
-		printf( "Couldn't open file for writing: \"%s\"\n", path );
+		//printf( "Couldn't open file for writing: \"%s\"\n", path );
 		return -1;
 	}
 

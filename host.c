@@ -21,7 +21,7 @@ typedef struct {
 } dpackfile_t;
 
 typedef struct {
-	char name[64];
+	char name[56];
 	uint32_t offset;
 	uint32_t size;
 } packfile_t;
@@ -32,6 +32,11 @@ typedef struct {
 	uint32_t numFiles;
 	packfile_t* pakFiles;
 } pack_t;
+
+typedef struct searchpath_s {
+	pack_t* pack;
+	struct searchpath_s* next;
+} searchpath_t;
 #pragma pack( pop )
 
 // pics
@@ -87,9 +92,6 @@ pack_t* COM_LoadPackFile( const char* path ) {
 		pak->numFiles = numPakFiles;
 		pak->pakFiles = pakFiles;
 
-		printf( "Loaded pack file \"%s\" with size of %u and %u entries.\n",
-			path, pakSz, numPakFiles );
-
 		return pak;
 
 		//free( pakFiles ); pakFiles = NULL;
@@ -99,12 +101,68 @@ pack_t* COM_LoadPackFile( const char* path ) {
 	return NULL;
 }
 
+static searchpath_t* com_searchpaths = NULL;
+
+void COM_AddGameDirectory( const char* dir ) {
+	char buf[128];
+	pack_t* pack;
+
+	for ( uint8_t i = 0; ; ++i ) {
+		snprintf( buf, 128, "%s/PAK%u.PAK", dir, i );
+		pack = COM_LoadPackFile( buf );
+		if ( pack == NULL ) break;
+		searchpath_t* newpath = (searchpath_t*)malloc( sizeof (searchpath_t) );
+		newpath->pack = pack;
+		newpath->next = com_searchpaths;
+		com_searchpaths = newpath;
+		printf( "Added pack file \"%s\" to search path with %u entries.\n",
+			pack->name, pack->numFiles );
+	}
+}
+
+uint8_t* COM_FindFile( const char* name, int32_t* size ) {
+	if ( !name ) return NULL;
+
+	searchpath_t* searchp;
+	for ( searchp = com_searchpaths; searchp != NULL; searchp = searchp->next ) {
+		pack_t* cpack = searchp->pack;
+		for ( uint16_t i = 0; i < cpack->numFiles; ++i ) {
+			packfile_t cpfile = cpack->pakFiles[i];
+			if ( Q_strcmp( name, cpfile.name ) == 0 ) {
+				if ( size ) *size = cpfile.size;
+				Sys_FileSeek( cpack->handle, cpfile.offset );
+				uint8_t* rdat = (uint8_t*)malloc( cpfile.size );
+				Sys_FileRead( cpack->handle, rdat, cpfile.size );
+				return rdat;
+			}
+		}
+	}
+
+	printf( "File \"%s\" not found in search paths.\n", name );
+	return NULL;
+}
+
 void Host_Init( void ) {
 	VID_Init();
 
-	pack_t* pak0 = COM_LoadPackFile( "id1/PAK0.PAK" );
-	//pack_t* pak1 = COM_LoadPackFile( "id1/PAK1.PAK" );
-	printf( "%s\n", pak0->name );
+	COM_AddGameDirectory( "id1" );
+
+	int32_t wadSize = 0;
+	uint8_t* wadData = COM_FindFile( "gfx.wad", &wadSize );
+	printf( "%d\n", wadSize );
+	free( wadData ); wadData = NULL;
+
+	// free ALL the things
+	searchpath_t* sp;
+	for ( sp = com_searchpaths; sp != NULL; ) {
+		searchpath_t* next = sp->next;
+		free( sp->pack->pakFiles ); sp->pack->pakFiles = NULL;
+		Sys_FileClose( sp->pack->handle );
+		free( sp->pack ); sp->pack = NULL;
+		free( sp ); sp = NULL;
+		sp = next;
+	}
+	free( com_searchpaths ); com_searchpaths = NULL;
 
 	// pic loading
 	int32_t picFile = Sys_FileOpenRead( "gfx/sbar.lmp", NULL );
