@@ -255,10 +255,7 @@ void VID_Init( void ) {
 	//winsurf = SDL_GetWindowSurface( window );
 
 	// load palette from palette.lmp
-	FILE* palFile = fopen( "gfx/palette.lmp", "rb" );
-	uint8_t* palData = (uint8_t*)malloc( 256 * 3 );
-	fread( palData, 3, 256, palFile );
-	fclose( palFile );
+	uint8_t* palData = COM_FindFile( "gfx/palette.lmp", NULL );
 
 	uint8_t* palp = palData;
 	for ( int i = 0; i < 256; ++i ) {

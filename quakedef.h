@@ -14,6 +14,5 @@
 #include "host.h"
 #include "sys.h"
 #include "vid.h"
-#include "file.h"
 
 #endif // _QUAKEDEF_H

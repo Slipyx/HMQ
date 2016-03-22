@@ -10,4 +10,8 @@ uint8_t COM_CheckParm( const char* parm );
 
 const char* va( const char* format, ... );
 
+void COM_InitFiles( void );
+uint8_t* COM_FindFile( const char* name, int32_t* size );
+void COM_ShutdownFiles( void );
+
 #endif // _COMMON_H
