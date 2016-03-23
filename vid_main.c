@@ -5,19 +5,11 @@
 // globals
 SDL_Window* window = NULL;
 // the base 1x render scale size
-static const Uint16 RNDW_BASE = 320;
-static const Uint16 RNDH_BASE = 200;
-// the actual render size used in a scale factor of base above
-// updated in SetRndScale
-Uint16 RNDW = 0;
-Uint16 RNDH = 0;
-uint32_t* pixbuf = NULL; // raw 32b pixel buffer
+static const uint16_t RNDW_BASE = 320;
+static const uint16_t RNDH_BASE = 200;
+
 // the pixbuf8 pointer is only valid when using 8bpp (bUsing8bpp)
 //uint8_t* pixbuf8 = NULL; // 8bpp index buffer
-//SDL_Surface* winsurf = NULL;
-uint32_t palette[256] = {0}; // 256 32bit colors array
-
-static bool bFullscreen = false;
 
 static SDL_Renderer* renderer = NULL;
 static SDL_Texture* rndtex = NULL;
@@ -32,8 +24,11 @@ typedef struct {
 	uint8_t hz;
 } vmode_t;
 
+viddef_t vid = {0, 0, NULL, {0}};
+
 static vmode_t modelist[40] = {0};
 static uint8_t modecount = 0;
+static bool bFullscreen = false;
 // initial modes are set in corresponding InitModes function
 static uint8_t curWinMode = 0;
 static uint8_t curFulMode = 0;
@@ -88,29 +83,27 @@ static void VID_InitFullscreenModes( void ) {
 static void VID_SetRndScale( uint8_t sFactor ) {
 	curRndScale = sFactor;
 	// set actual render size based on scale factor of base size
-	RNDW = RNDW_BASE * sFactor;
-	RNDH = RNDH_BASE * sFactor;
+	vid.RNDW = RNDW_BASE * sFactor;
+	vid.RNDH = RNDH_BASE * sFactor;
 	// RNDW/H_BASE will be 16:10, RNDH * 1.2 to stretch to its corresponding 4:3 view
-	SDL_RenderSetLogicalSize( renderer, RNDW, RNDH * 1.2f );
+	SDL_RenderSetLogicalSize( renderer, vid.RNDW, vid.RNDH * 1.2f );
 
 	if ( rndtex ) SDL_DestroyTexture( rndtex );
 	rndtex = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
-		SDL_TEXTUREACCESS_STREAMING, RNDW, RNDH );
+		SDL_TEXTUREACCESS_STREAMING, vid.RNDW, vid.RNDH );
 
 	/*if ( bUsing8bpp ) {
 		pixbuf8 = (uint8_t*)malloc( RNDW * RNDH * sizeof (pixbuf8[0]) );
 	}*/
 	// allocate memory for pixel buffer
-	if ( pixbuf ) { free( pixbuf ); pixbuf = NULL; }
-	pixbuf = (uint32_t*)malloc( RNDW * RNDH * sizeof (pixbuf[0]) );
+	if ( vid.pixbuf ) { free( vid.pixbuf ); vid.pixbuf = NULL; }
+	vid.pixbuf = (uint32_t*)malloc( vid.RNDW * vid.RNDH * sizeof (vid.pixbuf[0]) );
 
 	// clear initial pixel buffer state
-	for ( int i = 0; i < RNDW * RNDH; ++i ) {
-		/*if ( bUsing8bpp )
-			pixbuf8[i] = 8;
-		else*/
+	/*for ( int i = 0; i < RNDW * RNDH; ++i ) {
 		pixbuf[i] = 0x202020;
-	}
+	}*/
+	memset( vid.pixbuf, 0x20, vid.RNDW * vid.RNDH * sizeof (vid.pixbuf[0]) );
 }
 
 // (re)creates a renderer and sets its logical size
@@ -257,13 +250,15 @@ void VID_Init( void ) {
 	// load palette from palette.lmp
 	uint8_t* palData = COM_FindFile( "gfx/palette.lmp", NULL );
 
-	uint8_t* palp = palData;
-	for ( int i = 0; i < 256; ++i ) {
-		palette[i] = (255 << 24) |
-			(palp[0] << 16) | (palp[1] << 8) | (palp[2]);
-		palp += 3;
+	if ( palData ) {
+		uint8_t* palp = palData;
+		for ( int i = 0; i < 256; ++i ) {
+			vid.palette[i] = (255 << 24) |
+				(palp[0] << 16) | (palp[1] << 8) | (palp[2]);
+			palp += 3;
+		}
+		free( palData ); palData = NULL;
 	}
-	free( palData ); palData = NULL;
 }
 
 // frame is ready to be finalized
@@ -275,7 +270,7 @@ void VID_Update( void ) {
 			pixbuf[i] = palette[pixbuf8[i]];*/
 
 	//SDL_UpdateWindowSurface( window );
-	SDL_UpdateTexture( rndtex, NULL, pixbuf, RNDW * sizeof (pixbuf[0]) );
+	SDL_UpdateTexture( rndtex, NULL, vid.pixbuf, vid.RNDW * sizeof (vid.pixbuf[0]) );
 	SDL_RenderClear( renderer );
 	SDL_RenderCopy( renderer, rndtex, NULL, NULL );
 	SDL_RenderPresent( renderer );
@@ -285,7 +280,7 @@ void VID_Shutdown( void ) {
 	/*if ( bUsing8bpp ) {
 		free( pixbuf8 ); pixbuf8 = NULL;
 	}*/
-	free( pixbuf ); pixbuf = NULL;
+	free( vid.pixbuf ); vid.pixbuf = NULL;
 	SDL_DestroyTexture( rndtex );
 	SDL_DestroyRenderer( renderer );
 	SDL_DestroyWindow( window );

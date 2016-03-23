@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 
 // globals
+// vid_main
 extern SDL_Window* window;
 
 // treat screen buffer as indexed 8bpp?

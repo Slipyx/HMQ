@@ -8,11 +8,13 @@
 #include <stdarg.h>
 #include <time.h>
 #include <math.h>
+#include <string.h>
 
 #include "common.h"
 #include "q_stl.h"
 #include "host.h"
 #include "sys.h"
 #include "vid.h"
+#include "draw.h"
 
 #endif // _QUAKEDEF_H

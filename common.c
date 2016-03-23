@@ -129,17 +129,28 @@ static void COM_AddGameDirectory( const char* dir ) {
 uint8_t* COM_FindFile( const char* name, int32_t* size ) {
 	if ( !name ) return NULL;
 
-	searchpath_t* searchp;
-	for ( searchp = com_searchpaths; searchp != NULL; searchp = searchp->next ) {
-		pack_t* cpack = searchp->pack;
-		for ( uint16_t i = 0; i < cpack->numFiles; ++i ) {
-			packfile_t cpfile = cpack->pakFiles[i];
-			if ( Q_strcmp( name, cpfile.name ) == 0 ) {
-				if ( size ) *size = cpfile.size;
-				Sys_FileSeek( cpack->handle, cpfile.offset );
-				uint8_t* rdat = (uint8_t*)malloc( cpfile.size );
-				Sys_FileRead( cpack->handle, rdat, cpfile.size );
-				return rdat;
+	// search bare path first before PAK files
+	int32_t sz;
+	int32_t fhnd = Sys_FileOpenRead( va( "id1/%s", name ), &sz );
+	if ( fhnd >= 0 ) {
+		if ( size ) *size = sz;
+		uint8_t* rdat = (uint8_t*)malloc( sz );
+		Sys_FileRead( fhnd, rdat, sz );
+		Sys_FileClose( fhnd );
+		return rdat;
+	} else {
+		searchpath_t* searchp;
+		for ( searchp = com_searchpaths; searchp != NULL; searchp = searchp->next ) {
+			pack_t* cpack = searchp->pack;
+			for ( uint16_t i = 0; i < cpack->numFiles; ++i ) {
+				packfile_t cpfile = cpack->pakFiles[i];
+				if ( Q_strcmp( name, cpfile.name ) == 0 ) {
+					if ( size ) *size = cpfile.size;
+					Sys_FileSeek( cpack->handle, cpfile.offset );
+					uint8_t* rdat = (uint8_t*)malloc( cpfile.size );
+					Sys_FileRead( cpack->handle, rdat, cpfile.size );
+					return rdat;
+				}
 			}
 		}
 	}
