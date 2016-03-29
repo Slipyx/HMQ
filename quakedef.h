@@ -16,5 +16,6 @@
 #include "sys.h"
 #include "vid.h"
 #include "draw.h"
+#include "wad.h"
 
 #endif // _QUAKEDEF_H

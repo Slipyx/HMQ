@@ -1,34 +1,17 @@
 #include "quakedef.h"
 
-// vid_main
-//extern const uint16_t RNDW, RNDH;
-
 // benchmarking stuff
 float Sys_FloatTime( void );
 
 // timestep info
 float realTime = 0, frameTime = 0;
 
-pic_t qpic;
-
 void Host_Init( void ) {
 	COM_InitFiles();
 	VID_Init();
 
-	int32_t wadSize = 0;
-	uint8_t* wadData = COM_FindFile( "gfx.wad", &wadSize );
-	printf( "%d\n", wadSize );
-	free( wadData ); wadData = NULL;
-
-	// pic loading
-	uint8_t* picFileDat = COM_FindFile( "gfx/menuplyr.lmp", NULL );
-	if ( picFileDat ) {
-		qpic.w = *(uint32_t*)&picFileDat[0];
-		qpic.h = *(uint32_t*)&picFileDat[4];
-		qpic.data = (uint8_t*)malloc( qpic.w * qpic.h );
-		memcpy( qpic.data, &picFileDat[8], qpic.w * qpic.h );
-		free( picFileDat ); picFileDat = NULL;
-	}
+	// load wad for global persistance
+	W_LoadFile( "gfx.wad" );
 }
 
 // takes in a raw delta time and proceeds if enough
@@ -58,12 +41,31 @@ bool Host_Frame( float _t ) {
 		printf("%.7f\n", frameTime);
 		ftt = 0;
 	}*/
-	//memset( pixbuf, 0x40, RNDW * RNDH * sizeof (pixbuf[0]) );
+	// clear screen
+	memset( vid.pixbuf, vid.palette[3], vid.RNDW * vid.RNDH * sizeof (vid.pixbuf[0]) );
 
-	DrawRect( 160, 100, 160, 100, 255, 127, 0 );
-	static float xp = 0;
-	xp += 10 * frameTime;
-	DrawPic( (uint32_t)xp, vid.RNDH - qpic.h, qpic );
+	static uint8_t ln = 1;
+	static float lnt = 0;
+	lnt += frameTime;
+	if ( lnt >= 0.125f ) {
+		ln = rand() % 5 + 1;
+		lnt = 0;
+	}
+
+	// sbar
+	pic_t* sbar = W_GetPicLump( "SBAR" );
+
+	pic_t* qpic = W_GetPicLump( va( "FACE%u", ln ) );
+	//pic_t* qpic = (pic_t*)COM_FindFile( "gfx/sp_menu.lmp", NULL );
+
+	static float xp = 80;
+	DrawPic( sbar, (int)xp, vid.RNDH - sbar->h );
+	DrawString( "Hello, World!", (int)xp+100, 80 );
+	//DrawRect( xp+32, 112, 64, 32, 255, 127, 0 );
+	DrawPic( qpic, (int)xp+112, 100 );
+	xp -= 20 * frameTime;
+	//if ( xp + sbar->w <= 0 ) xp = 160;
+	//if ( xp >= vid.RNDH + 4 ) xp = 100;
 
 	// frame is ready to be finalized in VID
 	VID_Update();
@@ -75,9 +77,12 @@ void Host_Shutdown( void ) {
 	// shutdown video
 	VID_Shutdown();
 
+	// free global wad data
+	W_CloseFile();
+
 	// shutdown filesystem
 	COM_ShutdownFiles();
 
 	// free pic data
-	free( qpic.data ); qpic.data = NULL;
+	//free( qpic.data ); qpic.data = NULL;
 }

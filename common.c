@@ -17,13 +17,19 @@ const char* va( const char* format, ... ) {
 	va_list vl;
 	va_start( vl, format );
 
-	static char buf[1024];
-	vsnprintf( buf, 1024, format, vl );
+	static char buf[2][10240];
+	static uint8_t bidx = 1;
+	bidx = (bidx + 1) % 2;
+
+	vsnprintf( buf[bidx], sizeof (buf[bidx]), format, vl );
 
 	va_end( vl );
 
-	return buf;
+	return buf[bidx];
 }
+
+#define BASEGAME "id1"
+#define MAX_OS_PATH 128
 
 // PAK files
 #define MAX_PACKED_FILES 2048
@@ -47,7 +53,7 @@ typedef struct {
 } packfile_t;
 
 typedef struct {
-	char name[128];
+	char name[MAX_OS_PATH];
 	int32_t handle;
 	uint32_t numFiles;
 	packfile_t* pakFiles;
@@ -95,7 +101,7 @@ static pack_t* COM_LoadPackFile( const char* path ) {
 		}
 
 		pack_t* pak = (pack_t*)malloc( sizeof (pack_t) );
-		Q_strncpy( pak->name, path, 128 );
+		Q_strncpy( pak->name, path, MAX_OS_PATH );
 		pak->handle = pakHnd;
 		pak->numFiles = numPakFiles;
 		pak->pakFiles = pakFiles;
@@ -110,11 +116,11 @@ static pack_t* COM_LoadPackFile( const char* path ) {
 }
 
 static void COM_AddGameDirectory( const char* dir ) {
-	char buf[128];
+	char buf[MAX_OS_PATH];
 	pack_t* pack;
 
 	for ( uint8_t i = 0; ; ++i ) {
-		snprintf( buf, 128, "%s/PAK%u.PAK", dir, i );
+		snprintf( buf, MAX_OS_PATH, "%s/PAK%u.PAK", dir, i );
 		pack = COM_LoadPackFile( buf );
 		if ( pack == NULL ) break;
 		searchpath_t* newpath = (searchpath_t*)malloc( sizeof (searchpath_t) );
@@ -131,7 +137,9 @@ uint8_t* COM_FindFile( const char* name, int32_t* size ) {
 
 	// search bare path first before PAK files
 	int32_t sz;
-	int32_t fhnd = Sys_FileOpenRead( va( "id1/%s", name ), &sz );
+	char rawpath[MAX_OS_PATH];
+	snprintf( rawpath, MAX_OS_PATH, "%s/%s", BASEGAME, name );
+	int32_t fhnd = Sys_FileOpenRead( rawpath, &sz );
 	if ( fhnd >= 0 ) {
 		if ( size ) *size = sz;
 		uint8_t* rdat = (uint8_t*)malloc( sz );
@@ -160,7 +168,7 @@ uint8_t* COM_FindFile( const char* name, int32_t* size ) {
 }
 
 void COM_InitFiles( void ) {
-	COM_AddGameDirectory( "id1" );
+	COM_AddGameDirectory( BASEGAME );
 }
 
 void COM_ShutdownFiles( void ) {

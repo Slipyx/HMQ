@@ -122,7 +122,7 @@ static void VID_InitRenderer( void ) {
 		SDL_Quit(); exit( EXIT_FAILURE );
 	}
 
-	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "linear" );
+	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "nearest" );
 
 	// set internal render size based on a scale of RNDW/H_BASE (320x200)
 	VID_SetRndScale( curRndScale );
