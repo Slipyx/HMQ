@@ -47,7 +47,7 @@ static void DrawChar( uint8_t idx, int32_t x, int32_t y ) {
 	// 16 characters wide by 16 characters high
 	static const uint8_t chw = 8; // size of each character
 
-	if ( conchars == NULL ) conchars = (uint8_t*)W_GetPicLump( "CONCHARS" );
+	if ( conchars == NULL ) conchars = W_GetLumpName( "CONCHARS" );
 
 	uint32_t cw = chw, ch = chw;
 

@@ -11,7 +11,7 @@ void Host_Init( void ) {
 	VID_Init();
 
 	// load wad for global persistance
-	W_LoadFile( "gfx.wad" );
+	W_LoadWadFile( "gfx.wad" );
 }
 
 // takes in a raw delta time and proceeds if enough
@@ -53,9 +53,9 @@ bool Host_Frame( float _t ) {
 	}
 
 	// sbar
-	pic_t* sbar = W_GetPicLump( "SBAR" );
+	pic_t* sbar = (pic_t*)W_GetLumpName( "sBaR" );
 
-	pic_t* qpic = W_GetPicLump( va( "FACE%u", ln ) );
+	pic_t* qpic = (pic_t*)W_GetLumpName( va( "FACE%u", ln ) );
 	//pic_t* qpic = (pic_t*)COM_FindFile( "gfx/sp_menu.lmp", NULL );
 
 	static float xp = 80;
@@ -78,7 +78,7 @@ void Host_Shutdown( void ) {
 	VID_Shutdown();
 
 	// free global wad data
-	W_CloseFile();
+	W_CloseWadFile();
 
 	// shutdown filesystem
 	COM_ShutdownFiles();

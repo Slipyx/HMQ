@@ -5,7 +5,7 @@
 typedef struct {
 	uint32_t w, h;
 	// first four bytes of data
-	// actual size is w * h bytes
+	// actual length is w * h bytes
 	uint8_t data[4];
 } pic_t;
 
