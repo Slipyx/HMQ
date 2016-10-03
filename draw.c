@@ -8,12 +8,12 @@
 // assumed 16 chars wide and high, each char 8x8
 static uint8_t* conchars = NULL;
 
-// offsets of source data for partialy visible pics
+// offsets of source data for partially visible pics
 static uint32_t srcXofs = 0, srcYofs = 0;
 
-// makes adjustments for clipping
+// makes rect adjustments for clipping
 // returns false if not be visible
-static bool AdjustClipping( int32_t* xp, int32_t* yp, uint32_t* w, uint32_t* h ) {
+static bool ClipRect( int32_t* xp, int32_t* yp, uint32_t* w, uint32_t* h ) {
 	// return false if completely OOB
 	if ( *xp >= vid.RNDW || *yp >= vid.RNDH )
 		return false;
@@ -51,7 +51,7 @@ static void DrawChar( uint8_t idx, int32_t x, int32_t y ) {
 
 	uint32_t cw = chw, ch = chw;
 
-	if ( AdjustClipping( &x, &y, &cw, &ch ) == false ) return;
+	if ( ClipRect( &x, &y, &cw, &ch ) == false ) return;
 
 	uint32_t* buffer = vid.pixbuf;
 	buffer += (vid.RNDW * y + x);
@@ -85,7 +85,7 @@ void DrawString( const char* str, int32_t x, int32_t y ) {
 void DrawPic( pic_t* pic, int32_t x, int32_t y ) {
 	uint32_t pw = pic->w, ph = pic->h;
 
-	if ( AdjustClipping( &x, &y, &pw, &ph ) == false ) return;
+	if ( ClipRect( &x, &y, &pw, &ph ) == false ) return;
 
 	uint32_t* buffer = vid.pixbuf;
 	buffer += (vid.RNDW * y + x);
@@ -106,7 +106,7 @@ void DrawPic( pic_t* pic, int32_t x, int32_t y ) {
 void DrawRect( int32_t x, int32_t y, uint32_t w, uint32_t h,
 	uint8_t rv, uint8_t gv, uint8_t bv ) {
 
-	if ( AdjustClipping( &x, &y, &w, &h ) == false ) return;
+	if ( ClipRect( &x, &y, &w, &h ) == false ) return;
 
 	// build 32b color int from passed component values
 	uint32_t col = ((255 << 24) | (rv << 16) | (gv << 8) | (bv));
